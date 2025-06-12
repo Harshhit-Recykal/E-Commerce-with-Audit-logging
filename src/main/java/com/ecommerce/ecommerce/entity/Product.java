@@ -1,4 +1,4 @@
-package com.ecommerce.ecommerce.Entity;
+package com.ecommerce.ecommerce.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;

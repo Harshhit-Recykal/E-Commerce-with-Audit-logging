@@ -1,9 +1,9 @@
-package com.ecommerce.ecommerce.Controllers;
+package com.ecommerce.ecommerce.controllers;
 
-import com.ecommerce.ecommerce.DTO.ApiResponse;
-import com.ecommerce.ecommerce.DTO.ProductDto;
-import com.ecommerce.ecommerce.Entity.Product;
-import com.ecommerce.ecommerce.Service.ProductService;
+import com.ecommerce.ecommerce.dto.ApiResponse;
+import com.ecommerce.ecommerce.dto.ProductDto;
+import com.ecommerce.ecommerce.entity.Product;
+import com.ecommerce.ecommerce.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,17 +17,12 @@ import java.util.Optional;
 @RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
     private final ProductService productService;
 
+    @Autowired
     public ProductController(ProductService productService) {
         this.productService = productService;
     }
-
-//    @Autowired
-//    public ProductController(ProductService productService) {
-//        this.productService = productService;
-//    }
 
     @PostMapping("/new")
     public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody Product product) {

@@ -1,6 +1,6 @@
 //package com.ecommerce.ecommerce.Service;
 //
-//import com.ecommerce.ecommerce.DTO.ProductDto;
+//import com.ecommerce.ecommerce.dto.ProductDto;
 //import com.ecommerce.ecommerce.Entity.Product;
 //import com.ecommerce.ecommerce.Repository.ProductRepository;
 //import org.modelmapper.ModelMapper;
@@ -62,12 +62,11 @@
 //    }
 //
 //}
-package com.ecommerce.ecommerce.Service;
+package com.ecommerce.ecommerce.service;
 
-import com.ecommerce.ecommerce.DTO.ProductDto;
-import com.ecommerce.ecommerce.Entity.Product;
-import com.ecommerce.ecommerce.Repository.ProductRepository;
-import com.ecommerce.ecommerce.Service.ProductService;
+import com.ecommerce.ecommerce.dto.ProductDto;
+import com.ecommerce.ecommerce.entity.Product;
+import com.ecommerce.ecommerce.repository.ProductRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

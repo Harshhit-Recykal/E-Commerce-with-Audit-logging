@@ -1,7 +1,7 @@
 //package com.ecommerce.ecommerce.Service;
 //
 //import com.ecommerce.ecommerce.Entity.Product;
-//import com.ecommerce.ecommerce.DTO.ProductDto;
+//import com.ecommerce.ecommerce.dto.ProductDto;
 //import org.springframework.stereotype.Service;
 //
 //import java.util.List;
@@ -16,10 +16,9 @@
 //    void updateProduct(Product product);
 //    boolean deleteProduct(Long id);
 //}
-package com.ecommerce.ecommerce.Service;
-import com.ecommerce.ecommerce.Entity.Product;
-import com.ecommerce.ecommerce.DTO.ProductDto;
-import org.springframework.stereotype.Service;
+package com.ecommerce.ecommerce.service;
+import com.ecommerce.ecommerce.entity.Product;
+import com.ecommerce.ecommerce.dto.ProductDto;
 
 import java.util.List;
 import java.util.Optional;
