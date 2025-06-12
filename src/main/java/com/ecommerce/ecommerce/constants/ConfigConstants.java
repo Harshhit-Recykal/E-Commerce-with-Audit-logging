@@ -1,6 +1,6 @@
 package com.ecommerce.ecommerce.constants;
 
-public class ConfigConstants {
+public final class ConfigConstants {
 
     public static final String QUEUE_NAME = "ecommerce_queue";
 
