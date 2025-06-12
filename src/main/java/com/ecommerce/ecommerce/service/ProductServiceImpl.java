@@ -1,5 +1,6 @@
 package com.ecommerce.ecommerce.service;
 
+import com.ecommerce.ecommerce.annotations.Auditable;
 import com.ecommerce.ecommerce.dto.ProductDto;
 import com.ecommerce.ecommerce.entity.Product;
 import com.ecommerce.ecommerce.repository.ProductRepository;
@@ -24,6 +25,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Auditable(action = Auditable.ActionType.CREATE)
     public ProductDto createProduct(Product product) {
         return modelMapper.map(productRepository.save(product), ProductDto.class);
     }
@@ -41,6 +43,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Auditable(action = Auditable.ActionType.UPDATE)
     public void updateProduct(Product product) {
         productRepository.save(product);
     }
@@ -53,6 +56,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Auditable(action = Auditable.ActionType.DELETE)
     public boolean deleteProduct(Long id) {
         if (productRepository.existsById(id)) {
             productRepository.deleteById(id);
