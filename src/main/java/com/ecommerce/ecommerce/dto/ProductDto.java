@@ -1,5 +1,6 @@
 package com.ecommerce.ecommerce.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ public class ProductDto {
     private Integer quantity;
     private String imageUrl;
 
+    @JsonIgnore
     public String getProductById() {
         return id != null ? id.toString() : null;
     }
