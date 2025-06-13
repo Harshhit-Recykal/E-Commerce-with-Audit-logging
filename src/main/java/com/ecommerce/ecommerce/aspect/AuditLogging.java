@@ -6,8 +6,10 @@ import com.ecommerce.ecommerce.dto.AuditEvent;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
@@ -29,14 +31,18 @@ public class AuditLogging {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @Around("com.ecommerce.ecommerce.utils.PointcutUtils.auditLog() && @annotation(auditable)")
-    public Object logAudit(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
+    @Around("com.ecommerce.ecommerce.utils.PointcutUtils.auditLog()")
+    public Object logAudit(ProceedingJoinPoint joinPoint) throws Throwable {
         Object result;
+
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        Auditable auditable = AnnotationUtils.findAnnotation(method, Auditable.class);
+        String action = Objects.requireNonNull(auditable).action().name();
 
         try {
             result = joinPoint.proceed();
-        }
-        catch (Throwable throwable) {
+        } catch (Throwable throwable) {
             throw new RuntimeException(throwable);
         }
 
@@ -47,7 +53,7 @@ public class AuditLogging {
         AuditEvent event = AuditEvent.builder()
                 .entityName(entityName)
                 .entityId(entityId)
-                .action(auditable.action().name())
+                .action(action)
                 .timestamp(LocalDateTime.now())
                 .rawDataAfter(result)
                 .changedBy("USER")
@@ -94,7 +100,8 @@ public class AuditLogging {
                 if (!Objects.equals(oldVal, newVal)) {
                     diffs.put(field.getName(), List.of(oldVal, newVal));
                 }
-            } catch (IllegalAccessException ignored) {}
+            } catch (IllegalAccessException ignored) {
+            }
         }
 
         return diffs;
