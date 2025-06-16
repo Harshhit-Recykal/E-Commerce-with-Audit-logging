@@ -1,10 +1,8 @@
 package com.ecommerce.ecommerce.entity;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 @Entity
 @Table(name = "product_table")
 @Getter

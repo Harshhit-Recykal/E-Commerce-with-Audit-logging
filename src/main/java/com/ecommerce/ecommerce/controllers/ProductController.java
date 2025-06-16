@@ -61,7 +61,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody Product product) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto product) {
         Optional<ProductDto> productOpt = productService.getProductById(id);
         if (productOpt.isPresent()) {
             productService.updateProduct(product);

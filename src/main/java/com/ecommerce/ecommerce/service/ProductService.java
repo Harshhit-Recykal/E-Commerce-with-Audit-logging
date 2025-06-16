@@ -14,7 +14,7 @@ public interface ProductService {
 
     Optional<ProductDto> getProductByName(String name);
 
-    void updateProduct(Product product);
+    void updateProduct(ProductDto product);
 
     List<ProductDto> getAllProduct();
 

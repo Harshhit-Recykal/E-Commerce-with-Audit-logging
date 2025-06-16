@@ -15,7 +15,6 @@ public class ProductDto {
     private Double price;
     private Integer quantity;
     private String imageUrl;
-
     @JsonIgnore
     public String getProductById() {
         return id != null ? id.toString() : null;

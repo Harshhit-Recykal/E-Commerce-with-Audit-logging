@@ -44,7 +44,16 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Auditable(action = Auditable.ActionType.UPDATE)
-    public void updateProduct(Product product) {
+    public void updateProduct(ProductDto request) {
+        Product product = productRepository.findById(request.getId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setQuantity(request.getQuantity());
+        product.setImageUrl(request.getImageUrl());
+
         productRepository.save(product);
     }
 
