@@ -9,11 +9,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Auditable {
 
-    ActionType action();
-
-    enum ActionType {
-        CREATE,
-        UPDATE,
-        DELETE
-    }
 }
