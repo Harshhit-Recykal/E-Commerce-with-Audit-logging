@@ -51,6 +51,7 @@ public class AuditLogging {
                     .action(actionType.name())
                     .timestamp(LocalDateTime.now())
                     .rawDataAfter(result)
+                    .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
                     .build();
 
