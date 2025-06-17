@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -42,17 +43,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void updateProduct(ProductDto request) {
-        Product product = productRepository.findById(request.getId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+    public ProductDto updateProduct(Product product, ProductDto request) {
 
-        product.setName(request.getName());
-        product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
-        product.setQuantity(request.getQuantity());
-        product.setImageUrl(request.getImageUrl());
+        product.setName(!Objects.isNull(request.getName()) ? request.getName() : product.getName());
+        product.setDescription(!Objects.isNull(request.getDescription()) ? request.getDescription() : product.getDescription());
+        product.setPrice(!Objects.isNull(request.getPrice()) ? request.getPrice() : product.getPrice());
+        product.setQuantity(!Objects.isNull(request.getQuantity()) ? request.getQuantity() : product.getQuantity());
+        product.setImageUrl(!Objects.isNull(request.getImageUrl()) ? request.getImageUrl() : product.getImageUrl());
 
         productRepository.save(product);
+        return modelMapper.map(product, ProductDto.class);
     }
 
     @Override

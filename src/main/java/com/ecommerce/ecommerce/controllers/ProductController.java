@@ -1,9 +1,11 @@
 package com.ecommerce.ecommerce.controllers;
 
+import aj.org.objectweb.asm.commons.Remapper;
 import com.ecommerce.ecommerce.dto.ApiResponse;
 import com.ecommerce.ecommerce.dto.ProductDto;
 import com.ecommerce.ecommerce.entity.Product;
 import com.ecommerce.ecommerce.service.ProductService;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +21,12 @@ public class ProductController {
 
     private final ProductService productService;
 
+    private final ModelMapper modelMapper;
+
     @Autowired
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, ModelMapper modelMapper) {
         this.productService = productService;
+        this.modelMapper = modelMapper;
     }
 
     @PostMapping("/new")
@@ -61,10 +66,10 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto product) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto request) {
         Optional<ProductDto> productOpt = productService.getProductById(id);
         if (productOpt.isPresent()) {
-            productService.updateProduct(product);
+            productOpt = Optional.ofNullable(productService.updateProduct(modelMapper.map(productOpt, Product.class), request));
         }
         return productOpt.map(productDto ->
                 ResponseEntity.ok().body(new ApiResponse<>(
