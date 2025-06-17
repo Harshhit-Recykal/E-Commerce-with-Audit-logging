@@ -25,7 +25,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Auditable(action = Auditable.ActionType.CREATE)
     public ProductDto createProduct(Product product) {
         return modelMapper.map(productRepository.save(product), ProductDto.class);
     }
@@ -43,7 +42,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Auditable(action = Auditable.ActionType.UPDATE)
     public void updateProduct(ProductDto request) {
         Product product = productRepository.findById(request.getId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -65,7 +63,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Auditable(action = Auditable.ActionType.DELETE)
     public boolean deleteProduct(Long id) {
         if (productRepository.existsById(id)) {
             productRepository.deleteById(id);
@@ -73,5 +70,6 @@ public class ProductServiceImpl implements ProductService {
         }
         return false;
     }
+
 }
 

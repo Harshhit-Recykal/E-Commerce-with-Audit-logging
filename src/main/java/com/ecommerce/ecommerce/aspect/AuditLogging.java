@@ -1,24 +1,20 @@
 package com.ecommerce.ecommerce.aspect;
 
-import com.ecommerce.ecommerce.annotations.Auditable;
 import com.ecommerce.ecommerce.constants.ConfigConstants;
 import com.ecommerce.ecommerce.dto.AuditEvent;
+import com.ecommerce.ecommerce.enums.ActionType;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Aspect
 @Component
@@ -33,35 +29,50 @@ public class AuditLogging {
 
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.auditLog()")
     public Object logAudit(ProceedingJoinPoint joinPoint) throws Throwable {
-        Object result;
+        Object result = null;
 
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-        Method method = methodSignature.getMethod();
-        Auditable auditable = AnnotationUtils.findAnnotation(method, Auditable.class);
-        String action = Objects.requireNonNull(auditable).action().name();
+        String methodName = methodSignature.getMethod().getName().toLowerCase();
 
         try {
             result = joinPoint.proceed();
-        } catch (Throwable throwable) {
-            throw new RuntimeException(throwable);
+        } catch (Throwable ignored) {
         }
 
-        String entityId = extractEntityId(joinPoint.getArgs());
-        String entityName = extractEntityName(joinPoint.getArgs());
-        String methodName = joinPoint.getSignature().getName();
+        Enum<ActionType> actionType = isCrudMethod(methodName);
+        if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
 
-        AuditEvent event = AuditEvent.builder()
-                .entityName(entityName)
-                .entityId(entityId)
-                .action(action)
-                .timestamp(LocalDateTime.now())
-                .rawDataAfter(result)
-                .changedBy("USER")
-                .build();
+            String entityId = extractEntityId(joinPoint.getArgs());
+            String entityName = extractEntityName(joinPoint.getArgs());
 
-        rabbitTemplate.convertAndSend(ConfigConstants.TOPIC_NAME, ConfigConstants.ROUTING_KEY, event);
+            AuditEvent event = AuditEvent.builder()
+                    .entityName(entityName)
+                    .entityId(entityId)
+                    .action(actionType.name())
+                    .timestamp(LocalDateTime.now())
+                    .rawDataAfter(result)
+                    .changedBy("USER")
+                    .build();
+
+            rabbitTemplate.convertAndSend(ConfigConstants.TOPIC_NAME, ConfigConstants.ROUTING_KEY, event);
+        }
 
         return result;
+    }
+
+    private Enum<ActionType> isCrudMethod(String methodName) {
+
+        if(methodName.contains("insert") || methodName.contains("create") ) {
+            return ActionType.CREATE;
+        }
+        if(methodName.contains("update")) {
+            return ActionType.UPDATE;
+        }
+        if(methodName.contains("delete") || methodName.contains("remove")) {
+            return ActionType.DELETE;
+        }
+
+        return ActionType.UNKNOWN;
     }
 
     private String extractEntityId(Object[] args) {

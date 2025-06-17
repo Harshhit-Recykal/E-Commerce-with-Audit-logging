@@ -5,7 +5,7 @@ import org.aspectj.lang.annotation.Pointcut;
 
 public class PointcutUtils {
 
-    @Pointcut("@annotation(com.ecommerce.ecommerce.annotations.Auditable)")
+    @Pointcut("within(@org.springframework.stereotype.Service *)")
     public void auditLog() {
     };
 }
