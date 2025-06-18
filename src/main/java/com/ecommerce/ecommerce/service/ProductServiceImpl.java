@@ -43,7 +43,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDto updateProduct(Product product, ProductDto request) {
+    public ProductDto updateProduct(Product product, Product request) {
 
         product.setName(!Objects.isNull(request.getName()) ? request.getName() : product.getName());
         product.setDescription(!Objects.isNull(request.getDescription()) ? request.getDescription() : product.getDescription());

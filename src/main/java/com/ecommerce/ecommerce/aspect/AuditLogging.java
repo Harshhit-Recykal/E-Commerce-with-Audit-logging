@@ -9,6 +9,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,7 +53,7 @@ public class AuditLogging {
                     .entityId(entityId)
                     .action(actionType.name())
                     .timestamp(LocalDateTime.now())
-                    .rawDataAfter(result)
+                    .rawDataAfter(extractResponseBody(result))
                     .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
                     .build();
@@ -82,17 +83,26 @@ public class AuditLogging {
 
     private String extractEntityId(Object[] args) {
         for (Object arg : args) {
+            if (arg == null) continue;
+
+            if (arg instanceof Long || arg instanceof Integer || arg instanceof String) {
+                return String.valueOf(arg);
+            }
+
             try {
                 Method method = arg.getClass().getMethod("getId");
                 Object id = method.invoke(arg);
                 if (id != null) {
                     return String.valueOf(id);
                 }
-            } catch (Exception ignored) {
+            } catch (NoSuchMethodException ignored) {
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
         return null;
     }
+
 
     private String extractEntityName(Object[] args) {
         for (Object arg : args) {
@@ -101,6 +111,13 @@ public class AuditLogging {
             }
         }
         return null;
+    }
+
+    private Object extractResponseBody(Object result) {
+        if(result instanceof ResponseEntity) {
+            return ((ResponseEntity<?>) result).getBody();
+        }
+        return result;
     }
 
 }

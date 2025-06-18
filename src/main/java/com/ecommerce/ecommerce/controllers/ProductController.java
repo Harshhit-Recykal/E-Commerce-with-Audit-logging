@@ -66,7 +66,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto request) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody Product request) {
         Optional<ProductDto> productOpt = productService.getProductById(id);
         if (productOpt.isPresent()) {
             productOpt = Optional.ofNullable(productService.updateProduct(modelMapper.map(productOpt, Product.class), request));
