@@ -10,8 +10,10 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -32,18 +34,18 @@ public class AuditLogging {
         Object result = null;
 
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-        String methodName = methodSignature.getMethod().getName().toLowerCase();
+        Method method = methodSignature.getMethod();
+        String entityId = extractEntityId(joinPoint.getArgs());
+        String entityName = extractEntityName(joinPoint.getArgs());
 
         try {
             result = joinPoint.proceed();
         } catch (Throwable ignored) {
         }
 
-        Enum<ActionType> actionType = isCrudMethod(methodName);
+        Enum<ActionType> actionType = determineAction(method, entityId);
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
-
-            String entityId = extractEntityId(joinPoint.getArgs());
-            String entityName = extractEntityName(joinPoint.getArgs());
+            entityId = extractEntityId(joinPoint.getArgs());
 
             AuditEvent event = AuditEvent.builder()
                     .entityName(entityName)
@@ -61,16 +63,18 @@ public class AuditLogging {
         return result;
     }
 
-    private Enum<ActionType> isCrudMethod(String methodName) {
+    private Enum<ActionType> determineAction(Method method, String entityId) {
 
-        if(methodName.contains("insert") || methodName.contains("create") ) {
-            return ActionType.CREATE;
+        if (method.isAnnotationPresent(DeleteMapping.class)) {
+            return ActionType.DELETE;
         }
-        if(methodName.contains("update")) {
+        if (method.isAnnotationPresent(PutMapping.class)) {
             return ActionType.UPDATE;
         }
-        if(methodName.contains("delete") || methodName.contains("remove")) {
-            return ActionType.DELETE;
+        if (method.isAnnotationPresent(PostMapping.class)) {
+            boolean hasEntityId = !Objects.isNull(entityId);
+
+            return hasEntityId ? ActionType.UPDATE : ActionType.CREATE;
         }
 
         return ActionType.UNKNOWN;
@@ -87,7 +91,7 @@ public class AuditLogging {
             } catch (Exception ignored) {
             }
         }
-        return "UNKNOWN";
+        return null;
     }
 
     private String extractEntityName(Object[] args) {
@@ -96,27 +100,7 @@ public class AuditLogging {
                 return arg.getClass().getSimpleName();
             }
         }
-        return "UNKNOWN";
-    }
-
-
-    private Map<String, List<Object>> calculateFieldDiffs(Object oldObj, Object newObj) {
-        Map<String, List<Object>> diffs = new HashMap<>();
-        if (oldObj == null || newObj == null) return diffs;
-
-        for (Field field : oldObj.getClass().getDeclaredFields()) {
-            field.setAccessible(true);
-            try {
-                Object oldVal = field.get(oldObj);
-                Object newVal = field.get(newObj);
-                if (!Objects.equals(oldVal, newVal)) {
-                    diffs.put(field.getName(), List.of(oldVal, newVal));
-                }
-            } catch (IllegalAccessException ignored) {
-            }
-        }
-
-        return diffs;
+        return null;
     }
 
 }
