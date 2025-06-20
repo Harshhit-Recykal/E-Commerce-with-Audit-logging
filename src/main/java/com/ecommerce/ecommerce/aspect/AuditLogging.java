@@ -105,17 +105,35 @@ public class AuditLogging {
                 throw new RuntimeException(e);
             }
         }
-        return null;
+        return "UNKNOWN";
     }
 
 
     private String extractEntityName(Object[] args) {
         for (Object arg : args) {
-            if (arg != null && arg.getClass().getPackageName().contains("entity")) {
-                return arg.getClass().getSimpleName();
-            }
+           if(arg == null) continue;
+
+           Class<?> clazz = arg.getClass();
+           String className = clazz.getSimpleName();
+
+           String packageName = !Objects.isNull(clazz.getPackage()) ? clazz.getPackage().getName() : "";
+
+           if(packageName.startsWith("java.") ||  packageName.startsWith("javax.") || packageName.startsWith("org.springframework")) {
+               continue;
+           }
+
+           String entityName = className.replaceAll("(?i)(Dto)$", "");
+
+           if(entityName.equals(className)) {
+               return entityName;
+           }
+
+           if(packageName.toLowerCase().contains("entity")) {
+               return className;
+           }
+
         }
-        return null;
+        return "UNKNOWN";
     }
 
     private Object extractResponseBody(Object result) {

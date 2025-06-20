@@ -8,13 +8,13 @@ import java.util.Optional;
 
 
 public interface ProductService {
-    ProductDto createProduct(Product product);
+    ProductDto createProduct(ProductDto product);
 
     Optional<ProductDto> getProductById(Long id);
 
     Optional<ProductDto> getProductByName(String name);
 
-    ProductDto updateProduct(Product product, Product request);
+    ProductDto updateProduct(ProductDto product, ProductDto request);
 
     List<ProductDto> getAllProduct();
 

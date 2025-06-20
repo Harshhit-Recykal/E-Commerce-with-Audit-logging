@@ -26,8 +26,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDto createProduct(Product product) {
-        return modelMapper.map(productRepository.save(product), ProductDto.class);
+    public ProductDto createProduct(ProductDto product) {
+        Product newProduct = modelMapper.map(product, Product.class);
+        return modelMapper.map(productRepository.save(newProduct), ProductDto.class);
     }
 
     @Override
@@ -43,7 +44,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDto updateProduct(Product product, Product request) {
+    public ProductDto updateProduct(ProductDto product, ProductDto request) {
 
         product.setName(!Objects.isNull(request.getName()) ? request.getName() : product.getName());
         product.setDescription(!Objects.isNull(request.getDescription()) ? request.getDescription() : product.getDescription());
@@ -51,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
         product.setQuantity(!Objects.isNull(request.getQuantity()) ? request.getQuantity() : product.getQuantity());
         product.setImageUrl(!Objects.isNull(request.getImageUrl()) ? request.getImageUrl() : product.getImageUrl());
 
-        productRepository.save(product);
+        productRepository.save(modelMapper.map(product, Product.class));
         return modelMapper.map(product, ProductDto.class);
     }
 

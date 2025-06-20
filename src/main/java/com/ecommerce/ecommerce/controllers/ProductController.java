@@ -21,16 +21,13 @@ public class ProductController {
 
     private final ProductService productService;
 
-    private final ModelMapper modelMapper;
-
     @Autowired
-    public ProductController(ProductService productService, ModelMapper modelMapper) {
+    public ProductController(ProductService productService) {
         this.productService = productService;
-        this.modelMapper = modelMapper;
     }
 
     @PostMapping("/new")
-    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody Product product) {
+    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto product) {
         ProductDto savedProduct = productService.createProduct(product);
         ApiResponse<ProductDto> response = new ApiResponse<>(
                 true,
@@ -66,10 +63,10 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody Product request) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto request) {
         Optional<ProductDto> productOpt = productService.getProductById(id);
         if (productOpt.isPresent()) {
-            productOpt = Optional.ofNullable(productService.updateProduct(modelMapper.map(productOpt, Product.class), request));
+            productOpt = Optional.ofNullable(productService.updateProduct(productOpt.get(), request));
         }
         return productOpt.map(productDto ->
                 ResponseEntity.ok().body(new ApiResponse<>(
