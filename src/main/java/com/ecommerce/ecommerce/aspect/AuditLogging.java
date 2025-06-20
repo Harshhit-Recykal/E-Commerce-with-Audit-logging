@@ -38,19 +38,18 @@ public class AuditLogging {
 
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
+        String entityId = extractEntityId(joinPoint.getArgs());
+        Enum<ActionType> actionType = determineAction(method, entityId);
 
         try {
             result = joinPoint.proceed();
         } catch (Throwable ignored) {
         }
 
-        Object response = extractResponseBody(result);
-
-        String entityName = extractEntityName(joinPoint.getArgs());
-        String entityId = extractEntityId(response);
-
-        Enum<ActionType> actionType = determineAction(method, entityId);
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
+            Object response = extractResponseBody(result);
+            String entityName = extractEntityName(joinPoint.getArgs());
+            entityId = extractEntityId( new Object[] {response});
 
             AuditEvent event = AuditEvent.builder()
                     .entityName(entityName)
@@ -89,19 +88,28 @@ public class AuditLogging {
         return ActionType.UNKNOWN;
     }
 
-    private String extractEntityId(Object response) {
-        try {
-            Method method = response.getClass().getMethod("getId");
-            Object id = method.invoke(response);
-            if (id != null) {
-                return String.valueOf(id);
+    private String extractEntityId(Object[] args) {
+
+        for (Object arg : args) {
+            if (arg == null) {
+                continue;
             }
-        } catch (NoSuchMethodException ignored) {
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (arg instanceof Long || arg instanceof String) {
+                return String.valueOf(arg);
+            }
+            try {
+                Method method = arg.getClass().getMethod("getId");
+                Object id = method.invoke(arg);
+                if (id != null) {
+                    return String.valueOf(id);
+                }
+            } catch (NoSuchMethodException ignored) {
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        return "UNKNOWN";
+        return null;
     }
 
 
@@ -126,8 +134,8 @@ public class AuditLogging {
     private Object extractResponseBody(Object result) {
         if (result instanceof ResponseEntity) {
             Object response = ((ResponseEntity<?>) result).getBody();
-            if(response instanceof ApiResponse<?>){
-                return  ((ApiResponse<?>) response).getData();
+            if (response instanceof ApiResponse<?>) {
+                return ((ApiResponse<?>) response).getData();
             }
             return response;
         }
