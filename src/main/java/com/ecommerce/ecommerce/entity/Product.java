@@ -3,6 +3,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "product_table")
 @Getter
@@ -27,4 +30,9 @@ public class Product {
 
     @Column(nullable = false)
     private String imageUrl;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

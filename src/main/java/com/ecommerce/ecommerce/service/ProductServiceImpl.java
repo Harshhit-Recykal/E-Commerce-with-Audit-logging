@@ -8,6 +8,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -51,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(!Objects.isNull(request.getPrice()) ? request.getPrice() : product.getPrice());
         product.setQuantity(!Objects.isNull(request.getQuantity()) ? request.getQuantity() : product.getQuantity());
         product.setImageUrl(!Objects.isNull(request.getImageUrl()) ? request.getImageUrl() : product.getImageUrl());
-
+        product.setUpdatedAt(LocalDateTime.now());
         productRepository.save(modelMapper.map(product, Product.class));
         return modelMapper.map(product, ProductDto.class);
     }

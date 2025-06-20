@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,7 @@ public class ProductController {
 
     @PostMapping("/new")
     public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto product) {
+        product.setCreatedAt(LocalDateTime.now());
         ProductDto savedProduct = productService.createProduct(product);
         ApiResponse<ProductDto> response = new ApiResponse<>(
                 true,
@@ -64,6 +66,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductDto>> updateProductById(@PathVariable Long id, @RequestBody ProductDto request) {
+
         Optional<ProductDto> productOpt = productService.getProductById(id);
         if (productOpt.isPresent()) {
             productOpt = Optional.ofNullable(productService.updateProduct(productOpt.get(), request));
