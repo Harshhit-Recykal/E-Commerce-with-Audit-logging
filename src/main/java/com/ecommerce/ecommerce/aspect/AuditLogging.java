@@ -2,6 +2,7 @@ package com.ecommerce.ecommerce.aspect;
 
 import com.ecommerce.ecommerce.annotations.Auditable;
 import com.ecommerce.ecommerce.constants.ConfigConstants;
+import com.ecommerce.ecommerce.dto.ApiResponse;
 import com.ecommerce.ecommerce.dto.AuditEvent;
 import com.ecommerce.ecommerce.enums.ActionType;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -37,24 +38,26 @@ public class AuditLogging {
 
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
-        String entityId = extractEntityId(joinPoint.getArgs());
-        String entityName = extractEntityName(joinPoint.getArgs());
 
         try {
             result = joinPoint.proceed();
         } catch (Throwable ignored) {
         }
 
+        Object response = extractResponseBody(result);
+
+        String entityName = extractEntityName(joinPoint.getArgs());
+        String entityId = extractEntityId(response);
+
         Enum<ActionType> actionType = determineAction(method, entityId);
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
-            entityId = extractEntityId(joinPoint.getArgs());
 
             AuditEvent event = AuditEvent.builder()
                     .entityName(entityName)
                     .entityId(entityId)
                     .action(actionType.name())
                     .timestamp(LocalDateTime.now())
-                    .rawDataAfter(extractResponseBody(result))
+                    .rawDataAfter(response)
                     .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
                     .build();
@@ -78,7 +81,7 @@ public class AuditLogging {
 
             return hasEntityId ? ActionType.UPDATE : ActionType.CREATE;
         }
-        if(method.isAnnotationPresent(Auditable.class)) {
+        if (method.isAnnotationPresent(Auditable.class)) {
             Auditable auditable = method.getAnnotation(Auditable.class);
             return auditable.actionType();
         }
@@ -86,59 +89,47 @@ public class AuditLogging {
         return ActionType.UNKNOWN;
     }
 
-    private String extractEntityId(Object[] args) {
-        for (Object arg : args) {
-            if (arg == null) continue;
-
-            if (arg instanceof Long || arg instanceof Integer || arg instanceof String) {
-                return String.valueOf(arg);
+    private String extractEntityId(Object response) {
+        try {
+            Method method = response.getClass().getMethod("getId");
+            Object id = method.invoke(response);
+            if (id != null) {
+                return String.valueOf(id);
             }
-
-            try {
-                Method method = arg.getClass().getMethod("getId");
-                Object id = method.invoke(arg);
-                if (id != null) {
-                    return String.valueOf(id);
-                }
-            } catch (NoSuchMethodException ignored) {
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+        } catch (NoSuchMethodException ignored) {
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+
         return "UNKNOWN";
     }
 
 
     private String extractEntityName(Object[] args) {
         for (Object arg : args) {
-           if(arg == null) continue;
+            if (arg == null) continue;
 
-           Class<?> clazz = arg.getClass();
-           String className = clazz.getSimpleName();
+            Class<?> clazz = arg.getClass();
+            String className = clazz.getSimpleName();
 
-           String packageName = !Objects.isNull(clazz.getPackage()) ? clazz.getPackage().getName() : "";
+            String packageName = clazz.getPackageName();
 
-           if(packageName.startsWith("java.") ||  packageName.startsWith("javax.") || packageName.startsWith("org.springframework")) {
-               continue;
-           }
+            if (packageName.startsWith("java.") || packageName.startsWith("javax.") || packageName.startsWith("org.springframework")) {
+                continue;
+            }
 
-           String entityName = className.replaceAll("(?i)(Dto)$", "");
-
-           if(entityName.equals(className)) {
-               return entityName;
-           }
-
-           if(packageName.toLowerCase().contains("entity")) {
-               return className;
-           }
-
+            return className.replaceAll("(?i)(Dto)$", "");
         }
         return "UNKNOWN";
     }
 
     private Object extractResponseBody(Object result) {
-        if(result instanceof ResponseEntity) {
-            return ((ResponseEntity<?>) result).getBody();
+        if (result instanceof ResponseEntity) {
+            Object response = ((ResponseEntity<?>) result).getBody();
+            if(response instanceof ApiResponse<?>){
+                return  ((ApiResponse<?>) response).getData();
+            }
+            return response;
         }
         return result;
     }
