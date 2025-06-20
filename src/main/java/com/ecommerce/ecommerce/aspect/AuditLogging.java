@@ -1,5 +1,6 @@
 package com.ecommerce.ecommerce.aspect;
 
+import com.ecommerce.ecommerce.annotations.Auditable;
 import com.ecommerce.ecommerce.constants.ConfigConstants;
 import com.ecommerce.ecommerce.dto.AuditEvent;
 import com.ecommerce.ecommerce.enums.ActionType;
@@ -30,7 +31,7 @@ public class AuditLogging {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @Around("com.ecommerce.ecommerce.utils.PointcutUtils.auditLog()")
+    @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
     public Object logAudit(ProceedingJoinPoint joinPoint) throws Throwable {
         Object result = null;
 
@@ -66,16 +67,20 @@ public class AuditLogging {
 
     private Enum<ActionType> determineAction(Method method, String entityId) {
 
-        if (method.isAnnotationPresent(DeleteMapping.class)) {
+        if (method.isAnnotationPresent(DeleteMapping.class) || method.getName().toUpperCase().contains(ActionType.DELETE.name())) {
             return ActionType.DELETE;
         }
-        if (method.isAnnotationPresent(PutMapping.class)) {
+        if (method.isAnnotationPresent(PutMapping.class) || method.getName().toUpperCase().contains(ActionType.UPDATE.name())) {
             return ActionType.UPDATE;
         }
-        if (method.isAnnotationPresent(PostMapping.class)) {
+        if (method.isAnnotationPresent(PostMapping.class) || method.getName().toUpperCase().contains(ActionType.CREATE.name())) {
             boolean hasEntityId = !Objects.isNull(entityId);
 
             return hasEntityId ? ActionType.UPDATE : ActionType.CREATE;
+        }
+        if(method.isAnnotationPresent(Auditable.class)) {
+            Auditable auditable = method.getAnnotation(Auditable.class);
+            return auditable.actionType();
         }
 
         return ActionType.UNKNOWN;

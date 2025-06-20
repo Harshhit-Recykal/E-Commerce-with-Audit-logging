@@ -17,6 +17,7 @@ public class AuditEvent {
     private String entityName;
     private String entityId;
     private String action;
+    private String message;
     private LocalDateTime timestamp;
     private String changedBy;
     private String requestId;
