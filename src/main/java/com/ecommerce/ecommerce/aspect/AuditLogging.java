@@ -12,6 +12,8 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,8 @@ import java.util.*;
 @Component
 public class AuditLogging {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuditLogging.class);
+
     private final RabbitTemplate rabbitTemplate;
 
     private final EntityManager entityManager;
@@ -46,24 +50,33 @@ public class AuditLogging {
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
     public Object logAudit(ProceedingJoinPoint joinPoint) throws Throwable {
         Object result = null;
-
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
+
+        logger.info("Method: {} is intercepted by audit logging aspect", method.getName());
+
+        String entityName = extractEntityName(joinPoint.getArgs());
         String entityId = extractEntityId(joinPoint.getArgs());
         ActionType actionType = determineAction(method, entityId);
+
         Object rawDataBefore = null;
-        String entityName = extractEntityName(joinPoint.getArgs());
+
         if (entityId != null) {
             rawDataBefore = CloneUtils.deepCopy(objectMapper, getEntityByNameAndId(entityName, entityId, entityManager));
         }
+
         try {
             result = joinPoint.proceed();
-        } catch (Throwable ignored) {
+        } catch (Throwable ex) {
+            logger.error("Exception occurred while proceeding with method: {}, entityName = {}, entityId = {}, e = {}", method.getName(), entityName, entityId, ex.getMessage());
+            throw ex;
         }
 
         Object responseBody = extractResponseBody(result);
 
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
+
+            logger.debug("Building audit event for method: {}",  method.getName());
 
             LocalDateTime timeStamp = extractTimestamp(responseBody, actionType).orElse(LocalDateTime.now());
 
@@ -77,6 +90,8 @@ public class AuditLogging {
                     .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
                     .build();
+
+            logger.debug("Publishing audit event to rabbitmq for processing with requestId: {}", event.getRequestId());
 
             rabbitTemplate.convertAndSend(ConfigConstants.TOPIC_NAME, ConfigConstants.ROUTING_KEY, event);
         }
@@ -118,9 +133,10 @@ public class AuditLogging {
                 Method getIdMethod = arg.getClass().getMethod("getId");
                 Object id = getIdMethod.invoke(arg);
                 if (id != null) return String.valueOf(id);
-            } catch (NoSuchMethodException ignored) {
-                // continue silently
+            } catch (NoSuchMethodException e) {
+                logger.error("No method found for extracting entity Id, e = {}", e.getMessage());
             } catch (Exception e) {
+                logger.error("Exception occurred while extracting entity Id, e = {}", e.getMessage());
                 throw new RuntimeException("Error extracting entity ID", e);
             }
         }
@@ -179,7 +195,7 @@ public class AuditLogging {
                 return Optional.ofNullable((LocalDateTime) timeMethod.invoke(response));
             }
         } catch (Exception e) {
-            // Logging
+            logger.error("Failed to extract time stamp, e = {}", e.getMessage());
         }
 
         return Optional.empty();
