@@ -5,6 +5,8 @@ import com.ecommerce.ecommerce.constants.ConfigConstants;
 import com.ecommerce.ecommerce.dto.ApiResponse;
 import com.ecommerce.ecommerce.dto.AuditEvent;
 import com.ecommerce.ecommerce.enums.ActionType;
+import com.ecommerce.ecommerce.utils.CloneUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.metamodel.EntityType;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -32,10 +34,13 @@ public class AuditLogging {
 
     private final EntityManager entityManager;
 
+    private final ObjectMapper objectMapper;
+
     @Autowired
-    public AuditLogging(RabbitTemplate rabbitTemplate, EntityManager entityManager) {
+    public AuditLogging(RabbitTemplate rabbitTemplate, EntityManager entityManager, ObjectMapper objectMapper) {
         this.rabbitTemplate = rabbitTemplate;
         this.entityManager = entityManager;
+        this.objectMapper = objectMapper;
     }
 
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
@@ -45,32 +50,22 @@ public class AuditLogging {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
         String entityId = extractEntityId(joinPoint.getArgs());
-        Enum<ActionType> actionType = determineAction(method, entityId);
+        ActionType actionType = determineAction(method, entityId);
         Object rawDataBefore = null;
         String entityName = extractEntityName(joinPoint.getArgs());
-        if(entityId != null) {
-            rawDataBefore = getEntityByNameAndId(entityName,entityId,entityManager);
+        if (entityId != null) {
+            rawDataBefore = CloneUtils.deepCopy(objectMapper, getEntityByNameAndId(entityName, entityId, entityManager));
         }
         try {
             result = joinPoint.proceed();
         } catch (Throwable ignored) {
         }
 
+        Object responseBody = extractResponseBody(result);
+
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
 
-            LocalDateTime timeStamp = LocalDateTime.now();
-            Object response = extractResponseBody(result);
-
-            entityId = extractEntityId( new Object[] {response});
-
-            if(actionType == ActionType.CREATE) {
-                Method getCreatedTime = response.getClass().getMethod("getCreatedAt");
-                timeStamp = (LocalDateTime) getCreatedTime.invoke(response);
-            }
-            else if(actionType == ActionType.UPDATE) {
-                Method getUpdatedTime = response.getClass().getMethod("getUpdatedAt");
-                timeStamp = (LocalDateTime) getUpdatedTime.invoke(response);
-            }
+            LocalDateTime timeStamp = extractTimestamp(responseBody, actionType).orElse(LocalDateTime.now());
 
             AuditEvent event = AuditEvent.builder()
                     .entityName(entityName)
@@ -78,7 +73,7 @@ public class AuditLogging {
                     .action(actionType.name())
                     .timestamp(timeStamp)
                     .rawDataBefore(rawDataBefore)
-                    .rawDataAfter(response)
+                    .rawDataAfter(responseBody)
                     .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
                     .build();
@@ -89,7 +84,7 @@ public class AuditLogging {
         return result;
     }
 
-    private Enum<ActionType> determineAction(Method method, String entityId) {
+    private ActionType determineAction(Method method, String entityId) {
 
         if (method.isAnnotationPresent(DeleteMapping.class) || method.getName().toUpperCase().contains(ActionType.DELETE.name())) {
             return ActionType.DELETE;
@@ -110,57 +105,51 @@ public class AuditLogging {
         return ActionType.UNKNOWN;
     }
 
-    private String extractEntityId(Object[] args) {
 
+    private String extractEntityId(Object[] args) {
         for (Object arg : args) {
-            if (arg == null) {
-                continue;
-            }
+            if (arg == null) continue;
+
             if (arg instanceof Long || arg instanceof String) {
                 return String.valueOf(arg);
             }
+
             try {
-                Method method = arg.getClass().getMethod("getId");
-                Object id = method.invoke(arg);
-                if (id != null) {
-                    return String.valueOf(id);
-                }
+                Method getIdMethod = arg.getClass().getMethod("getId");
+                Object id = getIdMethod.invoke(arg);
+                if (id != null) return String.valueOf(id);
             } catch (NoSuchMethodException ignored) {
+                // continue silently
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Error extracting entity ID", e);
             }
         }
-
         return null;
     }
 
 
     private String extractEntityName(Object[] args) {
-        for (Object arg : args) {
-            if (arg == null) continue;
-
-            Class<?> clazz = arg.getClass();
-            String className = clazz.getSimpleName();
-
-            String packageName = clazz.getPackageName();
-
-            if (packageName.startsWith("java.") || packageName.startsWith("javax.") || packageName.startsWith("org.springframework")) {
-                continue;
-            }
-
-            return className.replaceAll("(?i)(Dto)$", "");
-        }
-        return "UNKNOWN";
+        return Arrays.stream(args)
+                .filter(Objects::nonNull)
+                .filter(arg -> {
+                    String pkg = arg.getClass().getPackageName();
+                    return !(pkg.startsWith("java.") || pkg.startsWith("javax.") || pkg.startsWith("org.springframework"));
+                })
+                .map(arg -> arg.getClass().getSimpleName().replaceAll("(?i)Dto$", ""))
+                .findFirst()
+                .orElse("UNKNOWN");
     }
 
     private Object extractResponseBody(Object result) {
-        if (result instanceof ResponseEntity) {
-            Object response = ((ResponseEntity<?>) result).getBody();
-            if (response instanceof ApiResponse<?>) {
-                return ((ApiResponse<?>) response).getData();
-            }
-            return response;
+        if (result instanceof Optional<?> optional) {
+            return optional.orElse(null);
         }
+
+        if (result instanceof ResponseEntity<?> responseEntity) {
+            Object body = responseEntity.getBody();
+            return (body instanceof ApiResponse<?> apiResponse) ? apiResponse.getData() : body;
+        }
+
         return result;
     }
 
@@ -176,5 +165,24 @@ public class AuditLogging {
         return entityManager.find(entityClass, id);
     }
 
+    private Optional<LocalDateTime> extractTimestamp(Object response, ActionType actionType) {
+        if (response == null) return Optional.empty();
+
+        try {
+            Method timeMethod = switch (actionType) {
+                case CREATE -> response.getClass().getMethod("getCreatedAt");
+                case UPDATE -> response.getClass().getMethod("getUpdatedAt");
+                default -> null;
+            };
+
+            if (timeMethod != null) {
+                return Optional.ofNullable((LocalDateTime) timeMethod.invoke(response));
+            }
+        } catch (Exception e) {
+            // Logging
+        }
+
+        return Optional.empty();
+    }
 
 }
