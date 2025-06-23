@@ -5,6 +5,7 @@ import com.ecommerce.ecommerce.constants.ConfigConstants;
 import com.ecommerce.ecommerce.dto.ApiResponse;
 import com.ecommerce.ecommerce.dto.AuditEvent;
 import com.ecommerce.ecommerce.enums.ActionType;
+import jakarta.persistence.metamodel.EntityType;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
@@ -27,9 +30,12 @@ public class AuditLogging {
 
     private final RabbitTemplate rabbitTemplate;
 
+    private final EntityManager entityManager;
+
     @Autowired
-    public AuditLogging(RabbitTemplate rabbitTemplate) {
+    public AuditLogging(RabbitTemplate rabbitTemplate, EntityManager entityManager) {
         this.rabbitTemplate = rabbitTemplate;
+        this.entityManager = entityManager;
     }
 
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
@@ -40,7 +46,11 @@ public class AuditLogging {
         Method method = methodSignature.getMethod();
         String entityId = extractEntityId(joinPoint.getArgs());
         Enum<ActionType> actionType = determineAction(method, entityId);
-
+        Object rawDataBefore = null;
+        String entityName = extractEntityName(joinPoint.getArgs());
+        if(entityId != null) {
+            rawDataBefore = getEntityByNameAndId(entityName,entityId,entityManager);
+        }
         try {
             result = joinPoint.proceed();
         } catch (Throwable ignored) {
@@ -50,7 +60,7 @@ public class AuditLogging {
 
             LocalDateTime timeStamp = LocalDateTime.now();
             Object response = extractResponseBody(result);
-            String entityName = extractEntityName(joinPoint.getArgs());
+
             entityId = extractEntityId( new Object[] {response});
 
             if(actionType == ActionType.CREATE) {
@@ -67,6 +77,7 @@ public class AuditLogging {
                     .entityId(entityId)
                     .action(actionType.name())
                     .timestamp(timeStamp)
+                    .rawDataBefore(rawDataBefore)
                     .rawDataAfter(response)
                     .requestId(UUID.randomUUID().toString())
                     .changedBy("USER")
@@ -152,5 +163,18 @@ public class AuditLogging {
         }
         return result;
     }
+
+    private Object getEntityByNameAndId(String entityName, Object id, EntityManager entityManager) {
+        Class<?> entityClass = entityManager.getMetamodel()
+                .getEntities()
+                .stream()
+                .filter(e -> e.getName().equals(entityName))
+                .findFirst()
+                .map(EntityType::getJavaType)
+                .orElseThrow(() -> new IllegalArgumentException("No such entity: " + entityName));
+
+        return entityManager.find(entityClass, id);
+    }
+
 
 }
