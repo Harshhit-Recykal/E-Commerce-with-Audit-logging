@@ -40,7 +40,6 @@ public class AuditLogging {
         Method method = methodSignature.getMethod();
         String entityId = extractEntityId(joinPoint.getArgs());
         Enum<ActionType> actionType = determineAction(method, entityId);
-        LocalDateTime timeStamp = LocalDateTime.now();
 
         try {
             result = joinPoint.proceed();
@@ -49,9 +48,11 @@ public class AuditLogging {
 
         if (!Objects.equals(actionType, ActionType.UNKNOWN)) {
 
+            LocalDateTime timeStamp = LocalDateTime.now();
             Object response = extractResponseBody(result);
             String entityName = extractEntityName(joinPoint.getArgs());
             entityId = extractEntityId( new Object[] {response});
+
             if(actionType == ActionType.CREATE) {
                 Method getCreatedTime = response.getClass().getMethod("getCreatedAt");
                 timeStamp = (LocalDateTime) getCreatedTime.invoke(response);
