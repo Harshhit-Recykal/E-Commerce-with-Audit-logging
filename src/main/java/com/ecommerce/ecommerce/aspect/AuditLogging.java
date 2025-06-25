@@ -5,6 +5,7 @@ import com.ecommerce.ecommerce.constants.ConfigConstants;
 import com.ecommerce.ecommerce.dto.ApiResponse;
 import com.ecommerce.ecommerce.dto.AuditEvent;
 import com.ecommerce.ecommerce.enums.ActionType;
+import com.ecommerce.ecommerce.service.EntityMatching;
 import com.ecommerce.ecommerce.utils.CloneUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.metamodel.EntityType;
@@ -42,12 +43,14 @@ public class AuditLogging {
     private final EntityManager entityManager;
 
     private final ObjectMapper objectMapper;
+    private final EntityMatching entityMatcher;
 
     @Autowired
-    public AuditLogging(RabbitTemplate rabbitTemplate, EntityManager entityManager, ObjectMapper objectMapper) {
+    public AuditLogging(RabbitTemplate rabbitTemplate, EntityManager entityManager, ObjectMapper objectMapper, EntityMatching entityMatcher) {
         this.rabbitTemplate = rabbitTemplate;
         this.entityManager = entityManager;
         this.objectMapper = objectMapper;
+        this.entityMatcher = entityMatcher;
     }
 
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
@@ -63,19 +66,24 @@ public class AuditLogging {
 
         String uri = request.getRequestURI();
         String entityName = extractEntityName(joinPoint.getArgs());
+//        String entityName = "UNKNOWN";
         String entityId = extractEntityId(joinPoint.getArgs());
 
-        // Updation of entityName if we couldn't find it from the arguement of the method
+        // Extraction of entityName from the uri of the http response:
         if (entityName.equals("UNKNOWN") && uri != null) {
             String[] parts = uri.split("/");
             // parts[0] might be empty if URI starts with "/"
+            String possibleEntityName = "";
             for (int i = 0; i < parts.length; i++) {
                 if ("api".equals(parts[i]) && i + 1 < parts.length) {
-                    entityName = parts[i + 1];
+                    possibleEntityName = parts[i + 1];
                     break;
                 }
             }
+            entityName = entityMatcher.getEntityName(possibleEntityName);
+            logger.debug("Entity name extracted from URI: {} to: {}", uri, entityName);
         }
+
 
         ActionType actionType = determineAction(method, entityId);
         Object rawDataBefore = null;
