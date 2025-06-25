@@ -20,6 +20,7 @@ public class EntityMatching {
         entityMappings.put("products", "Product");
         // Add more URL-EntityName mappings as needed
     }
+
      public void addEntity(String url , String entityName){
          entityMappings.put(url, entityName);
      }
