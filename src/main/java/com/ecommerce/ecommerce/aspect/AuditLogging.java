@@ -8,6 +8,7 @@ import com.ecommerce.ecommerce.enums.ActionType;
 import com.ecommerce.ecommerce.utils.CloneUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.metamodel.EntityType;
+import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
@@ -49,16 +52,32 @@ public class AuditLogging {
 
     @Around("com.ecommerce.ecommerce.utils.PointcutUtils.logAroundBasedOnRequestMapping()")
     public Object logAudit(ProceedingJoinPoint joinPoint) throws Throwable {
+
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+
         Object result = null;
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
 
         logger.info("Method: {} is intercepted by audit logging aspect", method.getName());
 
+        String uri = request.getRequestURI();
         String entityName = extractEntityName(joinPoint.getArgs());
         String entityId = extractEntityId(joinPoint.getArgs());
-        ActionType actionType = determineAction(method, entityId);
 
+        // Updation of entityName if we couldn't find it from the arguement of the method
+        if (entityName.equals("UNKNOWN") && uri != null) {
+            String[] parts = uri.split("/");
+            // parts[0] might be empty if URI starts with "/"
+            for (int i = 0; i < parts.length; i++) {
+                if ("api".equals(parts[i]) && i + 1 < parts.length) {
+                    entityName = parts[i + 1];
+                    break;
+                }
+            }
+        }
+
+        ActionType actionType = determineAction(method, entityId);
         Object rawDataBefore = null;
 
         if (entityId != null) {
