@@ -1,0 +1,53 @@
+audit:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    queue: audit.log.queue
+    exchange: audit.log.topic
+    routingKey: audit.log.route.key
+  enabled: true
+
+spring:
+  application:
+    name: ecommerce
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/interns_db?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 8080
+
+
+#logging:
+#  level:
+#    org:
+#      springframework: DEBUG
+
+# Uncomment below to enable Spring Security credentials from environment variables
+#spring:
+#  security:
+#    user:
+#      name: ${SPRING_SECURITY_USERNAME}
+#      password: ${SPRING_SECURITY_PASSWORD}
+entity:
+  mappings:
+    products: Product
+    orders: Order
+    customers: Customer
+

@@ -1,6 +1,5 @@
 package com.ecommerce.ecommerce.service;
 
-import com.ecommerce.ecommerce.annotations.Auditable;
 import com.ecommerce.ecommerce.dto.ProductDto;
 import com.ecommerce.ecommerce.entity.Product;
 import com.ecommerce.ecommerce.repository.ProductRepository;
