@@ -1,4 +1,5 @@
 audit:
+  enabled: true
   rabbitmq:
     host: localhost
     port: 5672
@@ -7,7 +8,6 @@ audit:
     queue: audit.log.queue
     exchange: audit.log.topic
     routingKey: audit.log.route.key
-  enabled: true
 
 spring:
   application:
