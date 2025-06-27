@@ -1,4 +1,5 @@
 package com.ecommerce.ecommerce.entity;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -13,7 +14,6 @@ import java.time.LocalDateTime;
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonProperty(value = "product_id")
     private Long id;
 
     @Column(nullable = false)
