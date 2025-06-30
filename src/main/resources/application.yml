@@ -1,5 +1,7 @@
 audit:
   enabled: true
+  audit-pointcut-type: request_mapping
+
   rabbitmq:
     host: localhost
     port: 5672
@@ -8,6 +10,8 @@ audit:
     queue: audit.log.queue
     exchange: audit.log.topic
     routingKey: audit.log.route.key
+
+
 
 spring:
   application:
@@ -30,9 +34,16 @@ spring:
     username: guest
     password: guest
 
+
+
 server:
   port: 8080
 
+
+
+entity-matching:
+  map:
+    products: Product
 
 #logging:
 #  level:
@@ -45,9 +56,3 @@ server:
 #    user:
 #      name: ${SPRING_SECURITY_USERNAME}
 #      password: ${SPRING_SECURITY_PASSWORD}
-entity:
-  mappings:
-    products: Product
-    orders: Order
-    customers: Customer
-
