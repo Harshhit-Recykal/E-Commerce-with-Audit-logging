@@ -1,6 +1,6 @@
 audit:
   enabled: true
-  audit-pointcut-type: request_mapping
+  audit-pointcut-type: SERVICE_CLASS
 
   rabbitmq:
     host: localhost
@@ -11,7 +11,9 @@ audit:
     exchange: audit.log.topic
     routingKey: audit.log.route.key
 
-
+  entity-matching:
+    map:
+      products: Product
 
 spring:
   application:
@@ -39,11 +41,6 @@ spring:
 server:
   port: 8080
 
-
-
-entity-matching:
-  map:
-    products: Product
 
 #logging:
 #  level:
